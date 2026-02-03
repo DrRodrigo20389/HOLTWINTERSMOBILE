@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SKYNET V15 - COMMAND CENTER</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <style>
+        body { 
+            background-color: #000; color: #fff; font-family: 'Verdana', sans-serif;
+            margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; 
+        }
+
+        /* TOOLBAR OTIMIZADA PARA MOBILE */
+        .toolbar { 
+            background: #050505; border-bottom: 2px solid #333; padding: 5px 10px; 
+            display: flex; align-items: center; justify-content: space-between; 
+            height: 70px; flex-shrink: 0; z-index: 100;
+        }
+        
+        .logo-box { display: flex; flex-direction: column; line-height: 1.1; min-width: 80px; }
+        .logo-main { font-size: 1.1rem; font-weight: 900; letter-spacing: 1px; }
+        .logo-sub { font-size: 0.7rem; font-weight: 900; color: #00ff41; letter-spacing: 1px; }
+
+        .inputs { display: flex; gap: 5px; align-items: center; flex-grow: 1; justify-content: center; }
+        input { 
+            background: #111; border: 1px solid #444; color: #fff; 
+            padding: 6px; font-size: 0.8rem; font-weight: bold; 
+            text-align: center; width: 65px; border-radius: 4px;
+        }
+        button { 
+            background: #00ff41; color: #000; border: none; 
+            padding: 7px 10px; font-size: 0.75rem; font-weight: 900; 
+            border-radius: 4px; cursor: pointer;
+        }
+
+        .live-price-box { text-align: right; min-width: 100px; padding-left: 5px; }
+        .live-label { font-size: 0.5rem; color: #888; font-weight: bold; text-transform: uppercase; }
+        .live-price { font-size: 1.15rem; font-weight: bold; font-family: monospace; white-space: nowrap; color: #fff; }
+
+        /* INDICADOR DE DESLIZE */
+        .scroll-hint {
+            display: none; position: fixed; bottom: 75px; left: 50%;
+            transform: translateX(-50%); background: rgba(0, 255, 65, 0.15);
+            padding: 5px 15px; border-radius: 20px; font-size: 0.65rem;
+            border: 1px solid #00ff41; color: #00ff41; z-index: 200;
+            pointer-events: none; animation: pulse 2s infinite; letter-spacing: 1px;
+        }
+
+        .main-container { flex: 1; display: flex; width: 100%; height: 100%; overflow: hidden; }
+
+        .left-column { width: 55%; border-right: 4px solid #222; display: flex; flex-direction: column; position: relative; }
+        .right-column { width: 45%; display: flex; flex-direction: column; }
+        .right-top, .right-bottom { flex: 1; display: flex; flex-direction: column; position: relative; }
+        .right-top { border-bottom: 4px solid #222; }
+
+        .screen-header { padding: 5px 12px; background: #0a0a0a; border-bottom: 1px solid #222; }
+        .screen-title { color: #00ff41; font-size: 0.8rem; font-weight: 900; }
+        
+        .chart-area { flex: 1; position: relative; width: 100%; background: #000; padding-bottom: 50px; }
+
+        /* HUD COM RÓTULOS ALVO */
+        .hud-tag {
+            position: absolute; top: 10px; left: 10px; pointer-events: none;
+            background: rgba(0, 0, 0, 0.8); border-left: 3px solid #00ff41;
+            padding: 6px 10px; border-radius: 4px; z-index: 10;
+        }
+        .target-label { font-size: 0.65rem; font-weight: bold; margin-bottom: 2px; text-transform: uppercase; }
+        .hud-val { font-size: 1.1rem; font-weight: 900; }
+
+        @keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+
+        @media (max-width: 768px) {
+            .scroll-hint { display: block; }
+            .main-container { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; }
+            .left-column, .right-top, .right-bottom { 
+                width: 100vw; height: 100%; flex-shrink: 0; scroll-snap-align: start; 
+            }
+            .right-column { flex-direction: row; width: auto; }
+            .toolbar { height: 65px; }
+            .live-price { font-size: 1.1rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="scroll-hint">← DESLIZE PARA LADOS →</div>
+
+    <div class="toolbar">
+        <div class="logo-box">
+            <span class="logo-main">SKYNET</span>
+            <span class="logo-sub">COMMAND</span>
+        </div>
+        <div class="inputs">
+            <input type="text" id="symbol" value="BTCBRL">
+            <button onclick="startSystem()">SCAN</button>
+        </div>
+        <div class="live-price-box">
+            <span class="live-label">LIVE PRICE</span>
+            <div class="live-price" id="mainPrice">---.---</div>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="left-column">
+            <div class="screen-header"><span class="screen-title">W1 - MACRO</span></div>
+            <div class="chart-area">
+                <div class="hud-tag" id="hudW">
+                    <div class="target-label" id="labelW">ALVO:</div>
+                    <div class="hud-val" id="targetW">---</div>
+                    <div style="font-size:0.65rem; color:#888;">CONF: <span id="scoreW" style="color:#00ff41;">---</span></div>
+                </div>
+                <canvas id="chartW"></canvas>
+            </div>
+        </div>
+        <div class="right-column">
+            <div class="right-top">
+                <div class="screen-header"><span class="screen-title">D1 - MÉDIO</span></div>
+                <div class="chart-area">
+                    <div class="hud-tag" id="hudD">
+                        <div class="target-label" id="labelD">ALVO:</div>
+                        <div class="hud-val" id="targetD">---</div>
+                        <div style="font-size:0.65rem; color:#888;">CONF: <span id="scoreD" style="color:#00ff41;">---</span></div>
+                    </div>
+                    <canvas id="chartD"></canvas>
+                </div>
+            </div>
+            <div class="right-bottom">
+                <div class="screen-header"><span class="screen-title">H4 - CURTO</span></div>
+                <div class="chart-area">
+                    <div class="hud-tag" id="hud4">
+                        <div class="target-label" id="label4">ALVO:</div>
+                        <div class="hud-val" id="target4">---</div>
+                        <div style="font-size:0.65rem; color:#888;">CONF: <span id="score4" style="color:#00ff41;">---</span></div>
+                    </div>
+                    <canvas id="chart4"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let chartW, chartD, chart4;
+        let ws;
+        let histW = [], histD = [], hist4 = [];
+
+        window.onload = () => { initCharts(); startSystem(); };
+
+        async function startSystem() {
+            if(ws) ws.close();
+            const symbol = document.getElementById('symbol').value.toUpperCase();
+            try {
+                const [resW, resD, res4] = await Promise.all([
+                    fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=1w&limit=1000`),
+                    fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=1d&limit=1000`),
+                    fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=4h&limit=1000`)
+                ]);
+                histW = parseData(await resW.json());
+                histD = parseData(await resD.json());
+                hist4 = parseData(await res4.json());
+                connectStream(symbol);
+                refreshEngines();
+            } catch (e) { console.error(e); }
+        }
+
+        function parseData(apiData) { return apiData.map(d => ({ x: d[0], c: parseFloat(d[4]) })); }
+
+        function connectStream(symbol) {
+            ws = new WebSocket(`wss://stream.binance.com:9443/ws/${symbol.toLowerCase()}@kline_1m`);
+            ws.onmessage = (e) => {
+                const price = parseFloat(JSON.parse(e.data).k.c);
+                document.getElementById('mainPrice').innerText = price.toFixed(2);
+                [histW, histD, hist4].forEach(h => { if(h.length) h[h.length-1].c = price; });
+                requestAnimationFrame(refreshEngines);
+            };
+        }
+
+        function refreshEngines() {
+            runEngine(histW, chartW, 'targetW', 'scoreW', 'labelW', 'hudW');
+            runEngine(histD, chartD, 'targetD', 'scoreD', 'labelD', 'hudD');
+            runEngine(hist4, chart4, 'target4', 'score4', 'label4', 'hud4');
+        }
+
+        function runEngine(history, chartObj, targetId, scoreId, labelId, hudId) {
+            if(history.length < 100) return;
+            const patternLen = 40, forecastLen = 40;
+            const currentNorm = normalize(history.slice(-patternLen));
+            let bestScore = Infinity, bestIndex = -1;
+
+            for(let i=0; i < history.length - patternLen - forecastLen; i++) {
+                const score = calcEuclidean(currentNorm, normalize(history.slice(i, i + patternLen)));
+                if(score < bestScore) { bestScore = score; bestIndex = i; }
+            }
+
+            if(bestIndex !== -1) {
+                const future = history.slice(bestIndex + patternLen, bestIndex + patternLen + forecastLen);
+                const projection = [];
+                let lastVal = history[history.length-1].c, lastTime = history[history.length-1].x;
+                let baseRef = history[bestIndex + patternLen - 1].c, step = history[1].x - history[0].x;
+                
+                let pointsAbove = 0, prices = [];
+                for(let k=0; k < future.length; k++) {
+                    let p = lastVal * (future[k].c / baseRef);
+                    prices.push(p);
+                    projection.push({ x: lastTime + ((k+1) * step), y: p });
+                    if(p > lastVal) pointsAbove++;
+                }
+
+                const isBull = pointsAbove >= 20;
+                const finalTarget = isBull ? Math.max(...prices) : Math.min(...prices);
+                
+                // ATUALIZAÇÃO DO HUD COM RÓTULOS
+                const elTarget = document.getElementById(targetId);
+                const elLabel = document.getElementById(labelId);
+                const elHud = document.getElementById(hudId);
+
+                elTarget.innerText = finalTarget.toFixed(2);
+                elTarget.style.color = isBull ? '#00ff41' : '#ff1744';
+                elLabel.innerText = isBull ? "ALVO MÁXIMO:" : "ALVO MÍNIMO:";
+                elLabel.style.color = isBull ? '#00ff41' : '#ff1744';
+                elHud.style.borderLeftColor = isBull ? '#00ff41' : '#ff1744';
+
+                draw(chartObj, history, projection, isBull);
+                let confidence = Math.max(8, 100 - (Math.pow(bestScore, 0.4) * 200));
+                document.getElementById(scoreId).innerText = Math.min(98, confidence).toFixed(0) + "%";
+            }
+        }
+
+        function normalize(data) { const start = data[0].c; return data.map(d => (d.c - start)/start); }
+        function calcEuclidean(a, b) { let sum = 0; for(let i=0; i<a.length; i++) sum += (a[i]-b[i])**2; return sum; }
+
+        function draw(chart, hist, proj, isBull) {
+            const zoom = window.innerWidth <= 768 ? 35 : 60;
+            const view = hist.slice(-zoom);
+            const allPrices = [...view.map(d => d.c), ...proj.map(d => d.y)];
+            const minP = Math.min(...allPrices);
+            const maxP = Math.max(...allPrices);
+            const range = maxP - minP;
+
+            chart.options.scales.y.min = minP - (range * 0.25); 
+            chart.options.scales.y.max = maxP + (range * 0.15);
+
+            chart.data.datasets[0].data = view.map(d => ({x: d.x, y: d.c}));
+            chart.data.datasets[1].data = [{x: view[view.length-1].x, y: view[view.length-1].c}, ...proj];
+            chart.data.datasets[1].borderColor = isBull ? '#00ff41' : '#ff1744';
+            chart.data.datasets[1].backgroundColor = isBull ? 'rgba(0,255,65,0.1)' : 'rgba(255,23,68,0.1)';
+            chart.update('none');
+        }
+
+        function initCharts() {
+            const opts = {
+                responsive: true, maintainAspectRatio: false, animation: false,
+                plugins: { legend: { display: false } },
+                layout: { padding: { bottom: 5, top: 5 } },
+                scales: {
+                    x: { type: 'time', grid: { display: false }, ticks: { display: false } },
+                    y: { position: 'right', grid: { color: '#111' }, ticks: { color: '#888', font: {size: 10} } }
+                }
+            };
+            const ds = [{ label: 'P', data: [], borderColor: '#fff', borderWidth: 2, pointRadius: 0 }, { label: 'F', data: [], borderColor: '#00ff41', borderWidth: 3, borderDash: [3,3], pointRadius: 0, fill: true }];
+            chartW = new Chart(document.getElementById('chartW').getContext('2d'), { type: 'line', data: { datasets: JSON.parse(JSON.stringify(ds)) }, options: JSON.parse(JSON.stringify(opts)) });
+            chartD = new Chart(document.getElementById('chartD').getContext('2d'), { type: 'line', data: { datasets: JSON.parse(JSON.stringify(ds)) }, options: JSON.parse(JSON.stringify(opts)) });
+            chart4 = new Chart(document.getElementById('chart4').getContext('2d'), { type: 'line', data: { datasets: JSON.parse(JSON.stringify(ds)) }, options: JSON.parse(JSON.stringify(opts)) });
+        }
+    </script>
+</body>
+</html>
