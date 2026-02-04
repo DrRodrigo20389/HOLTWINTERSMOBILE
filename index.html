@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SKYNET V18 - MOBILE COMMAND</title>
+    <title>SKYNET V18 - MOBILE PRECISION</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
     <style>
@@ -12,7 +12,6 @@
             margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; 
         }
 
-        /* TOOLBAR RESPONSIVA */
         .toolbar { 
             background: #050505; border-bottom: 2px solid #333; padding: 5px 10px; 
             display: flex; align-items: center; justify-content: space-between; 
@@ -37,7 +36,6 @@
         .live-price-box { text-align: right; min-width: 100px; }
         .live-price { font-size: 1.15rem; font-weight: bold; font-family: monospace; color: #00ff41; }
 
-        /* NAVEGAÇÃO SNAP LATERAL (MOBILE) */
         .main-container { flex: 1; display: flex; width: 100%; height: 100%; overflow: hidden; }
 
         .left-column { width: 55%; border-right: 4px solid #222; display: flex; flex-direction: column; position: relative; }
@@ -48,45 +46,27 @@
         .screen-header { padding: 5px 12px; background: #0a0a0a; border-bottom: 1px solid #222; }
         .screen-title { color: #00ff41; font-size: 0.8rem; font-weight: 900; }
         
-        /* ÁREA DO GRÁFICO - Aumentei o padding para as datas não sumirem */
-        .chart-area { flex: 1; position: relative; width: 100%; background: #000; padding-bottom: 25px; }
+        /* Aumentei o padding-bottom para as datas aparecerem no celular */
+        .chart-area { flex: 1; position: relative; width: 100%; background: #000; padding-bottom: 35px; }
 
         .hud-tag {
             position: absolute; top: 10px; left: 10px; pointer-events: none;
-            background: rgba(0, 0, 0, 0.8); border-left: 3px solid #00ff41;
+            background: rgba(0, 0, 0, 0.85); border-left: 3px solid #00ff41;
             padding: 6px 10px; border-radius: 4px; z-index: 10;
         }
-        .hud-val { font-size: 1.1rem; font-weight: 900; color: #fff; }
+        .hud-val { font-size: 1rem; font-weight: 900; color: #fff; }
 
-        /* HINT DE DESLIZE */
-        .scroll-hint {
-            display: none; position: fixed; bottom: 70px; left: 50%;
-            transform: translateX(-50%); background: rgba(0, 255, 65, 0.1);
-            padding: 5px 15px; border-radius: 20px; font-size: 0.65rem;
-            border: 1px solid #00ff41; color: #00ff41; z-index: 200;
-            pointer-events: none; animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
-
-        /* 📱 ESTILOS EXCLUSIVOS MOBILE 📱 */
         @media (max-width: 768px) {
-            .scroll-hint { display: block; }
             .main-container { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; }
             .left-column, .right-top, .right-bottom { 
                 width: 100vw; height: 100%; flex-shrink: 0; scroll-snap-align: start; 
             }
             .right-column { flex-direction: row; width: auto; }
             .toolbar { height: 65px; }
-            .hud-val { font-size: 1rem; }
-            /* Esconder labels do eixo X no mobile para não poluir, mas manter o tempo no Tooltip */
-            .chart-area { padding-bottom: 10px; }
         }
     </style>
 </head>
 <body>
-
-    <div class="scroll-hint">← DESLIZE PARA LADOS →</div>
 
     <div class="toolbar">
         <div class="logo-box">
@@ -109,7 +89,7 @@
                 <div class="hud-tag" id="hudW">
                     <div id="labelW" style="font-size:0.6rem; font-weight:bold; color:#888;">ALVO:</div>
                     <div class="hud-val" id="targetW">---</div>
-                    <div style="font-size:0.65rem">CONF: <span id="scoreW">---</span></div>
+                    <div style="font-size:0.6rem">CONF: <span id="scoreW">---</span></div>
                 </div>
                 <canvas id="chartW"></canvas>
             </div>
@@ -122,18 +102,18 @@
                     <div class="hud-tag" id="hudD">
                         <div id="labelD" style="font-size:0.6rem; font-weight:bold; color:#888;">ALVO:</div>
                         <div class="hud-val" id="targetD">---</div>
-                        <div style="font-size:0.65rem">CONF: <span id="scoreD">---</span></div>
+                        <div style="font-size:0.6rem">CONF: <span id="scoreD">---</span></div>
                     </div>
                     <canvas id="chartD"></canvas>
                 </div>
             </div>
             <div class="right-bottom">
-                <div class="screen-header"><span class="screen-title">H4 - 4 HORAS</span></div>
+                <div class="screen-header"><span class="screen-title">H4 - CURTO PRAZO</span></div>
                 <div class="chart-area">
                     <div class="hud-tag" id="hud4">
                         <div id="label4" style="font-size:0.6rem; font-weight:bold; color:#888;">ALVO:</div>
                         <div class="hud-val" id="target4">---</div>
-                        <div style="font-size:0.65rem">CONF: <span id="score4">---</span></div>
+                        <div style="font-size:0.6rem">CONF: <span id="score4">---</span></div>
                     </div>
                     <canvas id="chart4"></canvas>
                 </div>
@@ -276,22 +256,28 @@
 
         function initCharts() {
             const isMobile = window.innerWidth <= 768;
-            const opts = {
+            const commonOpts = {
                 responsive: true, maintainAspectRatio: false, animation: false,
+                interaction: { 
+                    intersect: false, 
+                    mode: 'index' // ESSENCIAL PARA MOBILE: Ativa ao tocar em qualquer lugar da coluna
+                },
                 plugins: { 
                     legend: { display: false },
                     tooltip: {
                         enabled: true,
-                        position: 'nearest',
-                        external: function(context) {
-                            // Vibração leve ao tocar pontos (Haptic Feedback simulado)
-                            if (context.tooltip.opacity > 0 && window.navigator.vibrate) {
-                                window.navigator.vibrate(5);
-                            }
-                        },
+                        backgroundColor: 'rgba(0,0,0,0.95)',
+                        titleColor: '#00ff41',
+                        titleFont: { size: 12, weight: 'bold' },
+                        bodyFont: { size: 14, family: 'monospace' },
+                        displayColors: false,
+                        padding: 10,
                         callbacks: {
-                            title: (ctx) => new Date(ctx[0].parsed.x).toLocaleString('pt-BR'),
-                            label: (ctx) => ` R$ ${ctx.parsed.y.toLocaleString('pt-BR')}`
+                            title: (ctx) => {
+                                const date = new Date(ctx[0].parsed.x);
+                                return date.toLocaleDateString('pt-BR') + ' ' + date.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+                            },
+                            label: (ctx) => ` R$ ${ctx.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`
                         }
                     }
                 },
@@ -300,22 +286,28 @@
                         type: 'time', 
                         grid: { display: false }, 
                         ticks: { 
-                            display: !isMobile, // Oculta datas no rodapé do mobile para ganhar espaço
-                            color: '#555', font: {size: 10} 
+                            display: true, // Reativado para mobile
+                            color: '#555', 
+                            font: { size: 8 },
+                            maxRotation: 45,
+                            autoSkip: true,
+                            maxTicksLimit: isMobile ? 4 : 8
                         } 
                     },
-                    y: { position: 'right', grid: { color: '#111' }, ticks: { color: '#888', font: {size: 10} } }
+                    y: { position: 'right', grid: { color: '#111' }, ticks: { color: '#888', font: {size: 9} } }
                 }
             };
+            
             const ds = [
                 { label: 'Real', data: [], borderColor: '#fff', borderWidth: 2, pointRadius: 0 },
                 { label: 'Projeção', data: [], borderColor: '#00ff41', borderWidth: 3, borderDash: [3,3], pointRadius: 0 },
                 { label: 'Upper', data: [], borderColor: 'rgba(255,255,255,0.05)', borderWidth: 1, pointRadius: 0 },
                 { label: 'Lower', data: [], borderColor: 'rgba(255,255,255,0.05)', borderWidth: 1, pointRadius: 0, fill: '-1', backgroundColor: 'rgba(255,255,255,0.02)' }
             ];
-            chartW = new Chart(document.getElementById('chartW').getContext('2d'), { type: 'line', data: { datasets: JSON.parse(JSON.stringify(ds)) }, options: JSON.parse(JSON.stringify(opts)) });
-            chartD = new Chart(document.getElementById('chartD').getContext('2d'), { type: 'line', data: { datasets: JSON.parse(JSON.stringify(ds)) }, options: JSON.parse(JSON.stringify(opts)) });
-            chart4 = new Chart(document.getElementById('chart4').getContext('2d'), { type: 'line', data: { datasets: JSON.parse(JSON.stringify(ds)) }, options: JSON.parse(JSON.stringify(opts)) });
+            
+            chartW = new Chart(document.getElementById('chartW').getContext('2d'), { type: 'line', data: { datasets: JSON.parse(JSON.stringify(ds)) }, options: commonOpts });
+            chartD = new Chart(document.getElementById('chartD').getContext('2d'), { type: 'line', data: { datasets: JSON.parse(JSON.stringify(ds)) }, options: commonOpts });
+            chart4 = new Chart(document.getElementById('chart4').getContext('2d'), { type: 'line', data: { datasets: JSON.parse(JSON.stringify(ds)) }, options: commonOpts });
         }
     </script>
 </body>
