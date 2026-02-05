@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SKYNET V58 - GITHUB READY</title>
+    <title>SKYNET V59 - ALINHAMENTO TOTAL</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
     <style>
@@ -25,7 +25,7 @@
 </head>
 <body>
     <div class="toolbar">
-        <div style="line-height:1"><div style="font-size:1.1rem; font-weight:900;">SKYNET</div><div style="font-size:0.6rem; color:#00ff41; font-weight:900;">V58 GITHUB</div></div>
+        <div style="line-height:1"><div style="font-size:1.1rem; font-weight:900;">SKYNET</div><div style="font-size:0.6rem; color:#00ff41; font-weight:900;">V59 HORIZON</div></div>
         <div style="display:flex; align-items:center;">
             <input type="text" id="symbol" value="BTCBRL">
             <button class="scan-btn" onclick="startSystem()">SCAN</button>
@@ -55,33 +55,23 @@
         async function startSystem() {
             if(ws) ws.close();
             const symbol = document.getElementById('symbol').value.toUpperCase();
-            
-            // Forçando HTTPS nas chamadas da API
             const fetchK = async (i) => {
                 const r = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${i}&limit=500`);
                 const data = await r.json();
                 return data.map(d => ({ x: Number(d[0]), c: parseFloat(d[4]) }));
             };
-
             try {
-                hists.W = await fetchK('1w');
-                hists.D = await fetchK('1d');
-                hists['4'] = await fetchK('4h');
-                connectStream(symbol);
-                refreshEngines();
-            } catch (err) {
-                console.error("Erro ao carregar dados:", err);
-                document.getElementById('mainPrice').innerText = "API ERROR";
-            }
+                hists.W = await fetchK('1w'); hists.D = await fetchK('1d'); hists['4'] = await fetchK('4h');
+                connectStream(symbol); refreshEngines();
+            } catch (err) { document.getElementById('mainPrice').innerText = "API ERROR"; }
         }
 
         function connectStream(symbol) {
             ws = new WebSocket(`wss://stream.binance.com:9443/ws/${symbol.toLowerCase()}@kline_1m`);
             ws.onmessage = (e) => {
-                const data = JSON.parse(e.data);
-                const p = parseFloat(data.k.c);
+                const p = parseFloat(JSON.parse(e.data).k.c);
                 document.getElementById('mainPrice').innerText = p.toLocaleString('pt-BR');
-                ['W', 'D', '4'].forEach(k => { if(hists[k] && hists[k].length) hists[k][hists[k].length-1].c = p; });
+                ['W', 'D', '4'].forEach(k => { if(hists[k].length) hists[k][hists[k].length-1].c = p; });
                 refreshEngines();
             };
         }
@@ -94,44 +84,45 @@
 
         function runEngine(hist, chart, tid, sid, cid, offsets) {
             if(!hist || hist.length < 100) return;
-            const pLen = 40, fLen = 40;
-            const step = hist[1].x - hist[0].x;
-
+            const pLen = 40, fLen = 40, step = hist[1].x - hist[0].x;
             const normalize = (d) => { const s = d[0].c; return d.map(v => (v.c - s)/s); };
             const calcE = (a, b) => { let s = 0; for(let i=0; i<a.length; i++) s += (a[i]-b[i])**2; return s; };
 
-            const getProj = (offset) => {
+            const getProj = (offset, customLen = fLen) => {
                 const idx = hist.length - 1 - offset;
                 if (idx < pLen) return null;
                 const cur = normalize(hist.slice(idx - pLen, idx));
                 let bScore = Infinity, bIdx = -1;
-                for(let i=0; i < idx - pLen - fLen - 5; i++) {
+                for(let i=0; i < idx - pLen - customLen - 5; i++) {
                     const s = calcE(cur, normalize(hist.slice(i, i + pLen)));
                     if(s < bScore) { bScore = s; bIdx = i; }
                 }
                 if(bIdx === -1) return null;
                 let lV = hist[idx].c, lT = hist[idx].x;
-                const fut = hist.slice(bIdx + pLen, bIdx + pLen + fLen);
+                const fut = hist.slice(bIdx + pLen, bIdx + pLen + customLen);
                 return { points: [{x: lT, y: lV}, ...fut.map((d, k) => ({ x: lT + ((k+1) * step), y: lV * (d.c / hist[bIdx + pLen - 1].c) }))], baseline: lV };
             };
 
-            const main = getProj(0);
+            const main = getProj(0, fLen);
             if(!main) return;
+            
+            // 🚀 ESTENDE OS RASTROS ATÉ O LIMITE DA ATUAL
+            const traces = offsets.map(o => getProj(o, fLen + o));
+
             const mainExtreme = calculateExtremeTarget(main.points, main.baseline);
             document.getElementById(tid).innerText = `ATUAL: R$ ${mainExtreme.toLocaleString('pt-BR', {maximumFractionDigits:0})}`;
 
-            const traces = offsets.map(o => getProj(o));
             let minDiff = Infinity, bestIdx = -1;
             traces.forEach((t, i) => {
                 if(!t) return;
                 const tExt = calculateExtremeTarget(t.points, t.baseline);
                 const diff = Math.abs((mainExtreme - tExt) / mainExtreme);
                 if(diff < minDiff) { minDiff = diff; bestIdx = i; }
-                chart.data.datasets[i+2].borderWidth = 0.5;
+                chart.data.datasets[i+2].borderWidth = 0.3; // Ultra-fino
             });
 
             if(bestIdx !== -1) {
-                chart.data.datasets[bestIdx+2].borderWidth = 2;
+                chart.data.datasets[bestIdx+2].borderWidth = 2; // Destaque
                 const convExt = calculateExtremeTarget(traces[bestIdx].points, traces[bestIdx].baseline);
                 const convEl = document.getElementById(cid);
                 convEl.innerText = `CONV: R$ ${convExt.toLocaleString('pt-BR', {maximumFractionDigits:0})}`;
@@ -146,44 +137,15 @@
             chart.update('none');
         }
 
-        function refreshEngines() {
-            if(charts.W) runEngine(hists.W, charts.W, 'targetW', 'diffW', 'convW', [2, 6, 10, 14]);
-            if(charts.D) runEngine(hists.D, charts.D, 'targetD', 'diffD', 'convD', [7, 14, 21, 28]);
-            if(charts['4']) runEngine(hists['4'], charts['4'], 'target4', 'diff4', 'conv4', [8, 16, 24, 32]);
-        }
-
         function initCharts() {
             ['W', 'D', '4'].forEach(k => {
                 const canvas = document.getElementById(`chart${k}`);
-                const ds = [
-                    { data: [], borderColor: '#FFF', borderWidth: 1, pointRadius: 0, hitRadius: 30 },
-                    { data: [], borderColor: '#00FF41', borderWidth: 2, borderDash: [2,1], pointRadius: 0, hitRadius: 30 }
-                ];
-                for(let i=0; i<4; i++) ds.push({ data: [], borderColor: colors[i], borderWidth: 0.5, borderDash: [4,2], pointRadius: 0, hitRadius: 30 });
-                charts[k] = new Chart(canvas.getContext('2d'), {
-                    type: 'line', data: { datasets: ds },
-                    options: {
-                        responsive: true, maintainAspectRatio: false, animation: false,
-                        interaction: { mode: 'nearest', intersect: true, axis: 'xy' },
-                        scales: { x: { type: 'time', grid: { display: false } }, y: { position: 'right', grid: { color: '#0a0a0a' } } },
-                        plugins: { legend: { display: false } }
-                    }
-                });
-
+                const ds = [{ data: [], borderColor: '#FFF', borderWidth: 1, pointRadius: 0, hitRadius: 30 }, { data: [], borderColor: '#00FF41', borderWidth: 2, borderDash: [2,1], pointRadius: 0, hitRadius: 30 }];
+                for(let i=0; i<4; i++) ds.push({ data: [], borderColor: colors[i], borderWidth: 0.3, borderDash: [4,2], pointRadius: 0, hitRadius: 30 });
+                charts[k] = new Chart(canvas.getContext('2d'), { type: 'line', data: { datasets: ds }, options: { responsive: true, maintainAspectRatio: false, animation: false, interaction: { mode: 'nearest', intersect: true, axis: 'xy' }, scales: { x: { type: 'time', grid: { display: false } }, y: { position: 'right', grid: { color: '#0a0a0a' } } }, plugins: { legend: { display: false } } } });
                 let state = { drag: false, lx: 0, ly: 0 };
                 canvas.addEventListener('touchstart', e => { if(e.touches.length === 1) { state.drag = true; state.lx = e.touches[0].clientX; state.ly = e.touches[0].clientY; } }, {passive: true});
-                canvas.addEventListener('touchmove', e => {
-                    if(!state.drag || e.touches.length > 1) return;
-                    const s = charts[k].scales;
-                    const dx = ((e.touches[0].clientX - state.lx) / s.x.width) * (s.x.max - s.x.min);
-                    const dy = ((e.touches[0].clientY - state.ly) / s.y.height) * (s.y.max - s.y.min);
-                    charts[k].options.scales.x.min = (charts[k].options.scales.x.min || s.x.min) - dx;
-                    charts[k].options.scales.x.max = (charts[k].options.scales.x.max || s.x.max) - dx;
-                    charts[k].options.scales.y.min = (charts[k].options.scales.y.min || s.y.min) + dy;
-                    charts[k].options.scales.y.max = (charts[k].options.scales.y.max || s.y.max) + dy;
-                    state.lx = e.touches[0].clientX; state.ly = e.touches[0].clientY;
-                    charts[k].update('none');
-                }, {passive: true});
+                canvas.addEventListener('touchmove', e => { if(!state.drag || e.touches.length > 1) return; const s = charts[k].scales; const dx = ((e.touches[0].clientX - state.lx) / s.x.width) * (s.x.max - s.x.min); const dy = ((e.touches[0].clientY - state.ly) / s.y.height) * (s.y.max - s.y.min); charts[k].options.scales.x.min = (charts[k].options.scales.x.min || s.x.min) - dx; charts[k].options.scales.x.max = (charts[k].options.scales.x.max || s.x.max) - dx; charts[k].options.scales.y.min = (charts[k].options.scales.y.min || s.y.min) + dy; charts[k].options.scales.y.max = (charts[k].options.scales.y.max || s.y.max) + dy; state.lx = e.touches[0].clientX; state.ly = e.touches[0].clientY; charts[k].update('none'); }, {passive: true});
                 canvas.addEventListener('touchend', () => state.drag = false);
             });
             startSystem();
