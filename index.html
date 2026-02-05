@@ -3,69 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SKYNET V52 - MOBILE SURGICAL</title>
+    <title>SKYNET V53 - MOBILE SNAP</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
     <style>
-        /* Otimização para Mobile e Fundo Negro */
         body { background-color: #000; color: #fff; font-family: 'Verdana', sans-serif; margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; touch-action: none; }
         
-        /* Toolbar Compacta para ganhar espaço de tela */
-        .toolbar { background: #050505; border-bottom: 2px solid #333; padding: 10px; display: flex; align-items: center; justify-content: space-between; height: 50px; flex-shrink: 0; }
-        .logo-box { line-height: 1; }
-        .logo-main { font-size: 1rem; font-weight: 900; color: #fff; }
-        .logo-sub { font-size: 0.6rem; color: #00ff41; font-weight: 900; letter-spacing: 1px; }
-        .live-price { font-size: 1.1rem; font-weight: bold; font-family: monospace; color: #00ff41; }
+        .toolbar { background: #050505; border-bottom: 2px solid #333; padding: 10px; display: flex; align-items: center; justify-content: space-between; height: 60px; flex-shrink: 0; }
+        .live-price { font-size: 1.3rem; font-weight: bold; font-family: monospace; color: #00ff41; }
 
-        /* Layout em Pilha para Mobile */
-        .main-container { flex: 1; display: flex; flex-direction: column; width: 100%; overflow-y: auto; scroll-snap-type: y mandatory; }
-        
-        .chart-section { 
-            position: relative; 
-            width: 100%; 
-            height: 45vh; /* Altura ideal para ver 2 gráficos por vez ou rolar */
-            min-height: 300px;
-            border-bottom: 2px solid #222; 
-            scroll-snap-align: start;
-            display: flex;
-            flex-direction: column;
-        }
+        /* Container de Rolagem Lateral */
+        .main-scroll { flex: 1; display: flex; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
+        .chart-section { min-width: 100vw; height: 100%; scroll-snap-align: start; position: relative; display: flex; flex-direction: column; border-right: 1px solid #222; }
 
         .chart-container { flex: 1; position: relative; background: #000; }
         
-        /* HUD Mobile - Maior leitura */
+        /* HUD com Letras Maiores e visíveis */
         .hud-tag { 
-            position: absolute; top: 35px; left: 10px; pointer-events: none; 
-            background: rgba(0,0,0,0.85); border-left: 3px solid #00ff41; 
-            padding: 8px 12px; border-radius: 4px; z-index: 10; border: 1px solid #333;
+            position: absolute; top: 45px; left: 15px; pointer-events: none; 
+            background: rgba(0,0,0,0.85); border-left: 4px solid #00ff41; 
+            padding: 10px 15px; border-radius: 6px; z-index: 10; border: 1px solid #444;
         }
-        .time-label { position: absolute; top: 10px; left: 10px; font-size: 0.75rem; font-weight: 900; color: #00ff41; z-index: 11; text-transform: uppercase; }
-        .reset-btn { position: absolute; top: 10px; right: 10px; background: rgba(0, 255, 65, 0.15); border: 1px solid #00ff41; color: #00ff41; padding: 6px 12px; font-size: 0.7rem; cursor: pointer; z-index: 1000; border-radius: 4px; font-weight: bold; }
+        .time-label { position: absolute; top: 15px; left: 15px; font-size: 0.9rem; font-weight: 900; color: #00ff41; z-index: 11; text-shadow: 2px 2px #000; }
+        .reset-btn { position: absolute; top: 15px; right: 15px; background: rgba(0, 255, 65, 0.2); border: 1px solid #00ff41; color: #00ff41; padding: 8px 15px; font-size: 0.75rem; cursor: pointer; z-index: 1000; border-radius: 5px; font-weight: bold; }
 
-        .val-atual { color: #00ff41; font-weight: 900; font-size: 1.1rem; }
-        .val-conv { font-weight: 900; font-size: 0.9rem; margin-top: 2px; }
-        .dif-text { font-size: 0.7rem; color: #888; }
+        .val-atual { color: #00ff41; font-weight: 900; font-size: 1.2rem; }
+        .val-conv { font-weight: 900; font-size: 1rem; margin-top: 4px; }
+        .dif-text { font-size: 0.8rem; color: #aaa; margin-top: 2px; }
 
-        /* Input flutuante para facilitar troca de ativo */
-        .input-group { display: flex; align-items: center; }
-        #symbol { background: #111; border: 1px solid #444; color: #fff; padding: 5px; width: 70px; text-align: center; font-size: 0.9rem; border-radius: 4px; }
-        .scan-btn { background: #00ff41; color: #000; border: none; padding: 6px 12px; font-weight: 900; margin-left: 5px; border-radius: 4px; font-size: 0.8rem; }
+        #symbol { background: #111; border: 1px solid #555; color: #fff; padding: 8px; width: 80px; text-align: center; font-size: 1rem; border-radius: 5px; }
+        .scan-btn { background: #00ff41; color: #000; border: none; padding: 8px 15px; font-weight: 900; margin-left: 8px; border-radius: 5px; font-size: 0.9rem; }
     </style>
 </head>
 <body>
     <div class="toolbar">
-        <div class="logo-box">
-            <div class="logo-main">SKYNET</div>
-            <div class="logo-sub">V52 MOBILE</div>
-        </div>
-        <div class="input-group">
+        <div style="line-height:1"><div style="font-size:1.1rem; font-weight:900;">SKYNET</div><div style="font-size:0.6rem; color:#00ff41; font-weight:900;">SNAP V53</div></div>
+        <div style="display:flex; align-items:center;">
             <input type="text" id="symbol" value="BTCBRL">
             <button class="scan-btn" onclick="startSystem()">SCAN</button>
         </div>
-        <div class="live-price" id="mainPrice">0.000</div>
+        <div class="live-price" id="mainPrice">---</div>
     </div>
 
-    <div class="main-container">
+    <div class="main-scroll" id="masterScroll">
         <div class="chart-section">
             <div class="time-label">W1 - SEMANAL</div>
             <button class="reset-btn" onclick="resetScale('W')">RESET</button>
@@ -78,7 +58,6 @@
                 <canvas id="chartW"></canvas>
             </div>
         </div>
-
         <div class="chart-section">
             <div class="time-label">D1 - DIÁRIO</div>
             <button class="reset-btn" onclick="resetScale('D')">RESET</button>
@@ -91,7 +70,6 @@
                 <canvas id="chartD"></canvas>
             </div>
         </div>
-
         <div class="chart-section">
             <div class="time-label">H4 - 4 HORAS</div>
             <button class="reset-btn" onclick="resetScale('4')">RESET</button>
@@ -108,7 +86,6 @@
 
     <script>
         let charts = {}, hists = { W: [], D: [], '4': [] };
-        let ws;
         const colors = ['#00FFFF', '#FF00FF', '#FFFF00', '#FF8C00'];
 
         function resetScale(key) {
@@ -120,24 +97,13 @@
         }
 
         async function startSystem() {
-            if(ws) ws.close();
             const symbol = document.getElementById('symbol').value.toUpperCase();
             const fetchK = async (i) => {
                 const r = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${i}&limit=600`);
                 return (await r.json()).map(d => ({ x: d[0], c: parseFloat(d[4]) }));
             };
             hists.W = await fetchK('1w'); hists.D = await fetchK('1d'); hists['4'] = await fetchK('4h');
-            connectStream(symbol); refreshEngines();
-        }
-
-        function connectStream(symbol) {
-            ws = new WebSocket(`wss://stream.binance.com:9443/ws/${symbol.toLowerCase()}@kline_1m`);
-            ws.onmessage = (e) => {
-                const p = parseFloat(JSON.parse(e.data).k.c);
-                document.getElementById('mainPrice').innerText = p.toLocaleString('pt-BR');
-                ['W', 'D', '4'].forEach(k => { if(hists[k].length) hists[k][hists[k].length-1].c = p; });
-                refreshEngines();
-            };
+            refreshEngines();
         }
 
         function refreshEngines() {
@@ -166,9 +132,8 @@
                     if(s < bScore) { bScore = s; bIdx = i; }
                 }
                 if(bIdx === -1) return null;
-                const fut = hist.slice(bIdx + pLen, bIdx + pLen + fLen);
                 let lV = hist[idx].c;
-                return { points: fut.map((d, k) => ({ x: hist[hist.length-1].x + ((k+1) * step), y: lV * (d.c / hist[bIdx + pLen - 1].c) })), baseline: lV };
+                return { points: (hist.slice(bIdx + pLen, bIdx + pLen + fLen)).map((d, k) => ({ x: hist[hist.length-1].x + ((k+1) * step), y: lV * (d.c / hist[bIdx + pLen - 1].c) })), baseline: lV };
             };
 
             const main = getProj(0);
@@ -197,7 +162,7 @@
                 document.getElementById(sid).innerText = `DIF: ${dDisplay}%`;
             }
 
-            chart.data.datasets[0].data = hist.slice(-100).map(d => ({x: d.x, y: d.c}));
+            chart.data.datasets[0].data = hist.slice(-80).map(d => ({x: d.x, y: d.c}));
             chart.data.datasets[1].data = [{x: hist[hist.length-1].x, y: hist[hist.length-1].c}, ...main.points];
             for(let i=0; i<4; i++) chart.data.datasets[i+2].data = traces[i] ? traces[i].points : [];
             chart.update('none');
@@ -210,10 +175,10 @@
             ['W', 'D', '4'].forEach(k => {
                 const canvas = document.getElementById(`chart${k}`);
                 const ds = [
-                    { label: 'Real', data: [], borderColor: '#FFF', borderWidth: 1, pointRadius: 0, hitRadius: 25 },
-                    { label: 'Atual', data: [], borderColor: '#00FF41', borderWidth: 2, borderDash: [2,1], pointRadius: 0, hitRadius: 25 }
+                    { label: 'Real', data: [], borderColor: '#FFF', borderWidth: 1, pointRadius: 0, hitRadius: 30 },
+                    { label: 'Atual', data: [], borderColor: '#00FF41', borderWidth: 2, borderDash: [2,1], pointRadius: 0, hitRadius: 30 }
                 ];
-                for(let i=0; i<4; i++) ds.push({ label: `Rastro`, data: [], borderColor: colors[i], borderWidth: 0.5, borderDash: [4,2], pointRadius: 0, hitRadius: 25 });
+                for(let i=0; i<4; i++) ds.push({ label: `Rastro`, data: [], borderColor: colors[i], borderWidth: 0.5, borderDash: [4,2], pointRadius: 0, hitRadius: 30 });
 
                 charts[k] = new Chart(canvas.getContext('2d'), {
                     type: 'line',
@@ -222,19 +187,20 @@
                         responsive: true, maintainAspectRatio: false, animation: false,
                         interaction: { mode: 'nearest', intersect: true, axis: 'xy' },
                         scales: { 
-                            x: { type: 'time', grid: { display: false }, ticks: { color: '#444', font: {size: 10} } }, 
-                            y: { position: 'right', grid: { color: '#0a0a0a' }, ticks: { color: '#666', font: {size: 10} } } 
+                            x: { type: 'time', grid: { display: false }, ticks: { color: '#444' } }, 
+                            y: { position: 'right', grid: { color: '#0a0a0a' }, ticks: { color: '#666' } } 
                         },
                         plugins: { legend: { display: false }, tooltip: { enabled: true, backgroundColor: 'rgba(0,0,0,0.9)', callbacks: { label: (ctx) => `R$ ${ctx.parsed.y.toLocaleString('pt-BR')}` } } }
                     }
                 });
 
-                // Gestos Mobile
+                // Gestos Mobile de Arraste e Zoom
                 let state = { drag: false, lx: 0, ly: 0 };
-                canvas.addEventListener('touchstart', e => { state.drag = true; state.lx = e.touches[0].clientX; state.ly = e.touches[0].clientY; }, {passive: true});
-                canvas.addEventListener('touchend', () => state.drag = false);
+                canvas.addEventListener('touchstart', e => { 
+                    if(e.touches.length === 1) { state.drag = true; state.lx = e.touches[0].clientX; state.ly = e.touches[0].clientY; }
+                }, {passive: true});
                 canvas.addEventListener('touchmove', e => {
-                    if(!state.drag) return;
+                    if(!state.drag || e.touches.length > 1) return;
                     const s = charts[k].scales;
                     const dx = ((e.touches[0].clientX - state.lx) / s.x.width) * (s.x.max - s.x.min);
                     const dy = ((e.touches[0].clientY - state.ly) / s.y.height) * (s.y.max - s.y.min);
@@ -245,6 +211,7 @@
                     state.lx = e.touches[0].clientX; state.ly = e.touches[0].clientY;
                     charts[k].update('none');
                 }, {passive: true});
+                canvas.addEventListener('touchend', () => state.drag = false);
             });
         }
         window.onload = () => { initCharts(); startSystem(); };
