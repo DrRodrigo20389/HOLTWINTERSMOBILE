@@ -3,29 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SKYNET V56 - MOBILE STABLE</title>
+    <title>SKYNET V57 - RECOVERY</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
     <style>
         body { background-color: #000; color: #fff; font-family: 'Verdana', sans-serif; margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; touch-action: none; }
         .toolbar { background: #050505; border-bottom: 2px solid #333; padding: 10px; display: flex; align-items: center; justify-content: space-between; height: 60px; flex-shrink: 0; }
-        .live-price { font-size: 1.3rem; font-weight: bold; font-family: monospace; color: #00ff41; }
+        .live-price { font-size: 1.4rem; font-weight: bold; font-family: monospace; color: #00ff41; }
         .main-scroll { flex: 1; display: flex; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
         .chart-section { min-width: 100vw; height: 100%; scroll-snap-align: start; position: relative; display: flex; flex-direction: column; }
         .chart-container { flex: 1; position: relative; background: #000; }
-        .hud-tag { position: absolute; top: 45px; left: 15px; pointer-events: none; background: rgba(0,0,0,0.85); border-left: 4px solid #00ff41; padding: 10px 15px; border-radius: 6px; z-index: 10; border: 1px solid #444; }
-        .time-label { position: absolute; top: 15px; left: 15px; font-size: 0.9rem; font-weight: 900; color: #00ff41; z-index: 11; }
-        .reset-btn { position: absolute; top: 15px; right: 15px; background: rgba(0, 255, 65, 0.2); border: 1px solid #00ff41; color: #00ff41; padding: 8px 15px; font-size: 0.75rem; cursor: pointer; z-index: 1000; border-radius: 5px; font-weight: bold; }
+        .hud-tag { position: absolute; top: 45px; left: 15px; pointer-events: none; background: rgba(0,0,0,0.9); border-left: 4px solid #00ff41; padding: 10px 15px; border-radius: 6px; z-index: 10; border: 1px solid #444; }
+        .time-label { position: absolute; top: 15px; left: 15px; font-size: 0.95rem; font-weight: 900; color: #00ff41; z-index: 11; }
+        .reset-btn { position: absolute; top: 15px; right: 15px; background: rgba(0, 255, 65, 0.2); border: 1px solid #00ff41; color: #00ff41; padding: 8px 15px; font-size: 0.8rem; cursor: pointer; z-index: 1000; border-radius: 5px; font-weight: bold; }
         .val-atual { color: #00ff41; font-weight: 900; font-size: 1.2rem; }
-        .val-conv { font-weight: 900; font-size: 1rem; margin-top: 4px; }
-        .dif-text { font-size: 0.8rem; color: #aaa; margin-top: 2px; }
-        #symbol { background: #111; border: 1px solid #555; color: #fff; padding: 8px; width: 80px; text-align: center; font-size: 1rem; border-radius: 5px; }
-        .scan-btn { background: #00ff41; color: #000; border: none; padding: 8px 15px; font-weight: 900; margin-left: 8px; border-radius: 5px; }
+        .val-conv { font-weight: 900; font-size: 1.1rem; margin-top: 4px; }
+        .dif-text { font-size: 0.85rem; color: #aaa; margin-top: 2px; }
+        #symbol { background: #111; border: 1px solid #555; color: #fff; padding: 8px; width: 85px; text-align: center; font-size: 1.1rem; border-radius: 5px; }
+        .scan-btn { background: #00ff41; color: #000; border: none; padding: 10px 18px; font-weight: 900; margin-left: 8px; border-radius: 5px; }
     </style>
 </head>
 <body>
     <div class="toolbar">
-        <div style="line-height:1"><div style="font-size:1.1rem; font-weight:900;">SKYNET</div><div style="font-size:0.6rem; color:#00ff41; font-weight:900;">STABLE V56</div></div>
+        <div style="line-height:1"><div style="font-size:1.1rem; font-weight:900;">SKYNET</div><div style="font-size:0.6rem; color:#00ff41; font-weight:900;">V57 RECOVERY</div></div>
         <div style="display:flex; align-items:center;">
             <input type="text" id="symbol" value="BTCBRL">
             <button class="scan-btn" onclick="startSystem()">SCAN</button>
@@ -53,7 +53,8 @@
 
     <script>
         let charts = {}, hists = { W: [], D: [], '4': [] };
-        const ghostColors = ['#003333', '#330033', '#333300', '#331a00']; // Cores bem escuras para os rastros finos
+        let ws;
+        const ghostColors = ['#003333', '#330033', '#333300', '#331a00']; 
         const solidColors = ['#00FFFF', '#FF00FF', '#FFFF00', '#FF8C00'];
 
         function resetScale(key) {
@@ -65,18 +66,39 @@
         }
 
         async function startSystem() {
+            if(ws) ws.close();
             const symbol = document.getElementById('symbol').value.toUpperCase();
-            const fetchK = async (i) => {
-                const r = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${i}&limit=500`);
-                const data = await r.json();
-                return data.map(d => ({ x: Number(d[0]), c: parseFloat(d[4]) }));
-            };
-            try {
-                hists.W = await fetchK('1w');
-                hists.D = await fetchK('1d');
-                hists['4'] = await fetchK('4h');
+            
+            async function fetchK(i) {
+                try {
+                    const r = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${i}&limit=500`);
+                    if (!r.ok) throw new Error("Erro na API");
+                    const data = await r.json();
+                    return data.map(d => ({ x: Number(d[0]), c: parseFloat(d[4]) }));
+                } catch(e) { return []; }
+            }
+
+            hists.W = await fetchK('1w');
+            hists.D = await fetchK('1d');
+            hists['4'] = await fetchK('4h');
+
+            if (hists.W.length > 0) {
+                connectStream(symbol);
                 refreshEngines();
-            } catch(e) { console.error("Erro ao carregar dados", e); }
+            } else {
+                setTimeout(startSystem, 2000); // Tenta novamente se falhar
+            }
+        }
+
+        function connectStream(symbol) {
+            ws = new WebSocket(`wss://stream.binance.com:9443/ws/${symbol.toLowerCase()}@kline_1m`);
+            ws.onmessage = (e) => {
+                const data = JSON.parse(e.data);
+                const p = parseFloat(data.k.c);
+                document.getElementById('mainPrice').innerText = p.toLocaleString('pt-BR');
+                ['W', 'D', '4'].forEach(k => { if(hists[k].length) hists[k][hists[k].length-1].c = p; });
+                refreshEngines();
+            };
         }
 
         function calculateExtremeTarget(points, baseline) {
@@ -89,6 +111,9 @@
             if(!hist || hist.length < 100) return;
             const pLen = 40, fLen = 40;
             const step = hist[1].x - hist[0].x;
+
+            function normalize(d) { const s = d[0].c; return d.map(v => (v.c - s)/s); }
+            function calcE(a, b) { let s = 0; for(let i=0; i<a.length; i++) s += (a[i]-b[i])**2; return s; }
 
             const getProj = (offset) => {
                 const idx = hist.length - 1 - offset;
@@ -139,8 +164,11 @@
             chart.update('none');
         }
 
-        function normalize(d) { const s = d[0].c; return d.map(v => (v.c - s)/s); }
-        function calcE(a, b) { let s = 0; for(let i=0; i<a.length; i++) s += (a[i]-b[i])**2; return s; }
+        function refreshEngines() {
+            if (charts.W) runEngine(hists.W, charts.W, 'targetW', 'diffW', 'convW', [2, 6, 10, 14]);
+            if (charts.D) runEngine(hists.D, charts.D, 'targetD', 'diffD', 'convD', [7, 14, 21, 28]);
+            if (charts['4']) runEngine(hists['4'], charts['4'], 'target4', 'diff4', 'conv4', [8, 16, 24, 32]);
+        }
 
         function initCharts() {
             ['W', 'D', '4'].forEach(k => {
@@ -156,9 +184,10 @@
                         responsive: true, maintainAspectRatio: false, animation: false,
                         interaction: { mode: 'nearest', intersect: true, axis: 'xy' },
                         scales: { x: { type: 'time', grid: { display: false } }, y: { position: 'right', grid: { color: '#0a0a0a' } } },
-                        plugins: { legend: { display: false }, tooltip: { enabled: true, backgroundColor: 'rgba(0,0,0,0.9)' } }
+                        plugins: { legend: { display: false } }
                     }
                 });
+
                 let state = { drag: false, lx: 0, ly: 0 };
                 canvas.addEventListener('touchstart', e => { if(e.touches.length === 1) { state.drag = true; state.lx = e.touches[0].clientX; state.ly = e.touches[0].clientY; } }, {passive: true});
                 canvas.addEventListener('touchmove', e => {
