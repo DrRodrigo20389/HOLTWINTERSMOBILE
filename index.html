@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SKYNET V60 - GITHUB STABLE</title>
+    <title>SKYNET V58 - GITHUB READY</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
     <style>
@@ -13,133 +13,166 @@
         .main-scroll { flex: 1; display: flex; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
         .chart-section { min-width: 100vw; height: 100%; scroll-snap-align: start; position: relative; display: flex; flex-direction: column; }
         .chart-container { flex: 1; position: relative; background: #000; }
-        .hud-tag { position: absolute; top: 45px; left: 15px; pointer-events: none; background: rgba(0,0,0,0.9); border-left: 4px solid #00ff41; padding: 10px 15px; border-radius: 6px; z-index: 10; border: 1px solid #444; }
+        .hud-tag { position: absolute; top: 45px; left: 15px; pointer-events: none; background: rgba(0,0,0,0.85); border-left: 4px solid #00ff41; padding: 10px 15px; border-radius: 6px; z-index: 10; border: 1px solid #444; }
         .time-label { position: absolute; top: 15px; left: 15px; font-size: 0.9rem; font-weight: 900; color: #00ff41; z-index: 11; }
         .reset-btn { position: absolute; top: 15px; right: 15px; background: rgba(0, 255, 65, 0.2); border: 1px solid #00ff41; color: #00ff41; padding: 8px 15px; font-size: 0.75rem; cursor: pointer; z-index: 1000; border-radius: 5px; font-weight: bold; }
         .val-atual { color: #00ff41; font-weight: 900; font-size: 1.2rem; }
         .val-conv { font-weight: 900; font-size: 1rem; margin-top: 4px; }
-        #symbol { background: #111; border: 1px solid #555; color: #fff; padding: 8px; width: 85px; text-align: center; font-size: 1rem; border-radius: 5px; }
-        .scan-btn { background: #00ff41; color: #000; border: none; padding: 10px 18px; font-weight: 900; margin-left: 8px; border-radius: 5px; }
+        .dif-text { font-size: 0.8rem; color: #aaa; margin-top: 2px; }
+        #symbol { background: #111; border: 1px solid #555; color: #fff; padding: 8px; width: 80px; text-align: center; font-size: 1rem; border-radius: 5px; }
+        .scan-btn { background: #00ff41; color: #000; border: none; padding: 8px 15px; font-weight: 900; margin-left: 8px; border-radius: 5px; }
     </style>
 </head>
 <body>
     <div class="toolbar">
-        <div style="line-height:1"><div style="font-size:1.1rem; font-weight:900;">SKYNET</div><div style="font-size:0.6rem; color:#00ff41; font-weight:900;">V60 STABLE</div></div>
+        <div style="line-height:1"><div style="font-size:1.1rem; font-weight:900;">SKYNET</div><div style="font-size:0.6rem; color:#00ff41; font-weight:900;">V58 GITHUB</div></div>
         <div style="display:flex; align-items:center;">
             <input type="text" id="symbol" value="BTCBRL">
-            <button class="scan-btn" onclick="location.reload()">RELOAD</button>
+            <button class="scan-btn" onclick="startSystem()">SCAN</button>
         </div>
-        <div class="live-price" id="mainPrice">CONECTANDO...</div>
+        <div class="live-price" id="mainPrice">LOADING...</div>
     </div>
 
-    <div class="main-scroll">
-        <div class="chart-section"><div class="time-label">W1 - SEMANAL</div><button class="reset-btn" onclick="resetScale('W')">RESET</button><div class="chart-container"><div class="hud-tag"><div id="targetW" class="val-atual">---</div><div id="convW" class="val-conv">---</div></div><canvas id="chartW"></canvas></div></div>
-        <div class="chart-section"><div class="time-label">D1 - DIÁRIO</div><button class="reset-btn" onclick="resetScale('D')">RESET</button><div class="chart-container"><div class="hud-tag"><div id="targetD" class="val-atual">---</div><div id="convD" class="val-conv">---</div></div><canvas id="chartD"></canvas></div></div>
-        <div class="chart-section"><div class="time-label">H4 - 4 HORAS</div><button class="reset-btn" onclick="resetScale('4')">RESET</button><div class="chart-container"><div class="hud-tag"><div id="target4" class="val-atual">---</div><div id="conv4" class="val-conv">---</div></div><canvas id="chart4"></canvas></div></div>
+    <div class="main-scroll" id="masterScroll">
+        <div class="chart-section"><div class="time-label">W1 - SEMANAL</div><button class="reset-btn" onclick="resetScale('W')">RESET</button><div class="chart-container"><div class="hud-tag"><div id="targetW" class="val-atual">ATUAL: ---</div><div id="convW" class="val-conv">CONV: ---</div><div id="diffW" class="dif-text">DIF: ---</div></div><canvas id="chartW"></canvas></div></div>
+        <div class="chart-section"><div class="time-label">D1 - DIÁRIO</div><button class="reset-btn" onclick="resetScale('D')">RESET</button><div class="chart-container"><div class="hud-tag"><div id="targetD" class="val-atual">ATUAL: ---</div><div id="convD" class="val-conv">CONV: ---</div><div id="diffD" class="dif-text">DIF: ---</div></div><canvas id="chartD"></canvas></div></div>
+        <div class="chart-section"><div class="time-label">H4 - 4 HORAS</div><button class="reset-btn" onclick="resetScale('4')">RESET</button><div class="chart-container"><div class="hud-tag"><div id="target4" class="val-atual">ATUAL: ---</div><div id="conv4" class="val-conv">CONV: ---</div><div id="diff4" class="dif-text">DIF: ---</div></div><canvas id="chart4"></canvas></div></div>
     </div>
 
     <script>
         let charts = {}, hists = { W: [], D: [], '4': [] };
+        let ws;
         const colors = ['#00FFFF', '#FF00FF', '#FFFF00', '#FF8C00'];
 
         function resetScale(key) {
-            const c = charts[key]; if(!c) return;
-            c.options.scales.x.min = undefined; c.options.scales.x.max = undefined;
-            c.options.scales.y.min = undefined; c.options.scales.y.max = undefined;
-            c.update();
+            const chart = charts[key];
+            if(!chart) return;
+            chart.options.scales.x.min = undefined; chart.options.scales.x.max = undefined;
+            chart.options.scales.y.min = undefined; chart.options.scales.y.max = undefined;
+            chart.update();
         }
 
-        async function start() {
-            const sym = document.getElementById('symbol').value.toUpperCase();
+        async function startSystem() {
+            if(ws) ws.close();
+            const symbol = document.getElementById('symbol').value.toUpperCase();
+            
+            // Forçando HTTPS nas chamadas da API
             const fetchK = async (i) => {
-                const r = await fetch(`https://api.binance.com/api/v3/klines?symbol=${sym}&interval=${i}&limit=450`);
-                return (await r.json()).map(d => ({ x: Number(d[0]), c: parseFloat(d[4]) }));
+                const r = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${i}&limit=500`);
+                const data = await r.json();
+                return data.map(d => ({ x: Number(d[0]), c: parseFloat(d[4]) }));
             };
+
             try {
-                hists.W = await fetchK('1w'); hists.D = await fetchK('1d'); hists['4'] = await fetchK('4h');
-                initCharts(); connectWS(sym);
-            } catch(e) { document.getElementById('mainPrice').innerText = "ERRO API"; }
+                hists.W = await fetchK('1w');
+                hists.D = await fetchK('1d');
+                hists['4'] = await fetchK('4h');
+                connectStream(symbol);
+                refreshEngines();
+            } catch (err) {
+                console.error("Erro ao carregar dados:", err);
+                document.getElementById('mainPrice').innerText = "API ERROR";
+            }
         }
 
-        function connectWS(s) {
-            const ws = new WebSocket(`wss://stream.binance.com:9443/ws/${s.toLowerCase()}@kline_1m`);
+        function connectStream(symbol) {
+            ws = new WebSocket(`wss://stream.binance.com:9443/ws/${symbol.toLowerCase()}@kline_1m`);
             ws.onmessage = (e) => {
-                const p = parseFloat(JSON.parse(e.data).k.c);
+                const data = JSON.parse(e.data);
+                const p = parseFloat(data.k.c);
                 document.getElementById('mainPrice').innerText = p.toLocaleString('pt-BR');
-                ['W','D','4'].forEach(k => { if(hists[k].length) hists[k][hists[k].length-1].c = p; });
-                updateEngines();
+                ['W', 'D', '4'].forEach(k => { if(hists[k] && hists[k].length) hists[k][hists[k].length-1].c = p; });
+                refreshEngines();
             };
         }
 
-        function getExtreme(pts, base) {
-            let up = pts.filter(p => p.y > base).length;
-            let vals = pts.map(p => p.y);
-            return (up > pts.length/2) ? Math.max(...vals) : Math.min(...vals);
+        function calculateExtremeTarget(points, baseline) {
+            let countAbove = points.filter(p => p.y > baseline).length;
+            let values = points.map(p => p.y);
+            return (countAbove > points.length / 2) ? Math.max(...values) : Math.min(...values);
         }
 
-        function run(hist, chart, tid, cid, off) {
+        function runEngine(hist, chart, tid, sid, cid, offsets) {
             if(!hist || hist.length < 100) return;
-            const pL = 40, fL = 40, step = hist[1].x - hist[0].x;
-            const norm = (d) => { const s = d[0].c; return d.map(v => (v.c-s)/s); };
-            const err = (a, b) => { let s=0; for(let i=0; i<a.length; i++) s+=(a[i]-b[i])**2; return s; };
+            const pLen = 40, fLen = 40;
+            const step = hist[1].x - hist[0].x;
 
-            const proj = (o, len) => {
-                const idx = hist.length - 1 - o; if(idx < pL) return null;
-                const cur = norm(hist.slice(idx-pL, idx));
-                let bS = Infinity, bI = -1;
-                for(let i=0; i < idx-pL-len-5; i++) {
-                    const s = err(cur, norm(hist.slice(i, i+pL)));
-                    if(s < bS) { bS = s; bI = i; }
+            const normalize = (d) => { const s = d[0].c; return d.map(v => (v.c - s)/s); };
+            const calcE = (a, b) => { let s = 0; for(let i=0; i<a.length; i++) s += (a[i]-b[i])**2; return s; };
+
+            const getProj = (offset) => {
+                const idx = hist.length - 1 - offset;
+                if (idx < pLen) return null;
+                const cur = normalize(hist.slice(idx - pLen, idx));
+                let bScore = Infinity, bIdx = -1;
+                for(let i=0; i < idx - pLen - fLen - 5; i++) {
+                    const s = calcE(cur, normalize(hist.slice(i, i + pLen)));
+                    if(s < bScore) { bScore = s; bIdx = i; }
                 }
-                if(bI === -1) return null;
-                const f = hist.slice(bI+pL, bI+pL+len);
-                return { points: [{x: hist[idx].x, y: hist[idx].c}, ...f.map((d, k) => ({ x: hist[idx].x + ((k+1)*step), y: hist[idx].c * (d.c / hist[bI+pL-1].c) }))], base: hist[idx].c };
+                if(bIdx === -1) return null;
+                let lV = hist[idx].c, lT = hist[idx].x;
+                const fut = hist.slice(bIdx + pLen, bIdx + pLen + fLen);
+                return { points: [{x: lT, y: lV}, ...fut.map((d, k) => ({ x: lT + ((k+1) * step), y: lV * (d.c / hist[bIdx + pLen - 1].c) }))], baseline: lV };
             };
 
-            const m = proj(0, fL); if(!m) return;
-            const tr = off.map(o => proj(o, fL + o));
-            const mEx = getExtreme(m.points, m.base);
-            document.getElementById(tid).innerText = `ATUAL: R$ ${mEx.toLocaleString('pt-BR', {maximumFractionDigits:0})}`;
+            const main = getProj(0);
+            if(!main) return;
+            const mainExtreme = calculateExtremeTarget(main.points, main.baseline);
+            document.getElementById(tid).innerText = `ATUAL: R$ ${mainExtreme.toLocaleString('pt-BR', {maximumFractionDigits:0})}`;
 
-            let minD = Infinity, best = -1;
-            tr.forEach((t, i) => {
+            const traces = offsets.map(o => getProj(o));
+            let minDiff = Infinity, bestIdx = -1;
+            traces.forEach((t, i) => {
                 if(!t) return;
-                const tEx = getExtreme(t.points, t.base);
-                const d = Math.abs((mEx - tEx)/mEx);
-                if(d < minD) { minD = d; best = i; }
-                chart.data.datasets[i+2].borderWidth = 0.3;
+                const tExt = calculateExtremeTarget(t.points, t.baseline);
+                const diff = Math.abs((mainExtreme - tExt) / mainExtreme);
+                if(diff < minDiff) { minDiff = diff; bestIdx = i; }
+                chart.data.datasets[i+2].borderWidth = 0.5;
             });
 
-            if(best !== -1) {
-                chart.data.datasets[best+2].borderWidth = 2;
-                const cEx = getExtreme(tr[best].points, tr[best].base);
-                const el = document.getElementById(cid);
-                el.innerText = `CONV: R$ ${cEx.toLocaleString('pt-BR', {maximumFractionDigits:0})}`;
-                el.style.color = colors[best];
+            if(bestIdx !== -1) {
+                chart.data.datasets[bestIdx+2].borderWidth = 2;
+                const convExt = calculateExtremeTarget(traces[bestIdx].points, traces[bestIdx].baseline);
+                const convEl = document.getElementById(cid);
+                convEl.innerText = `CONV: R$ ${convExt.toLocaleString('pt-BR', {maximumFractionDigits:0})}`;
+                convEl.style.color = colors[bestIdx];
+                const dDisplay = ((mainExtreme - calculateExtremeTarget(traces[0].points, traces[0].baseline)) / mainExtreme * 100).toFixed(2);
+                document.getElementById(sid).innerText = `DIF: ${dDisplay}%`;
             }
 
             chart.data.datasets[0].data = hist.slice(-80).map(d => ({x: d.x, y: d.c}));
-            chart.data.datasets[1].data = m.points;
-            for(let i=0; i<4; i++) chart.data.datasets[i+2].data = tr[i] ? tr[i].points : [];
+            chart.data.datasets[1].data = main.points;
+            for(let i=0; i<4; i++) chart.data.datasets[i+2].data = traces[i] ? traces[i].points : [];
             chart.update('none');
         }
 
-        function updateEngines() {
-            run(hists.W, charts.W, 'targetW', 'convW', [2,6,10,14]);
-            run(hists.D, charts.D, 'targetD', 'convD', [7,14,21,28]);
-            run(hists['4'], charts['4'], 'target4', 'conv4', [8,16,24,32]);
+        function refreshEngines() {
+            if(charts.W) runEngine(hists.W, charts.W, 'targetW', 'diffW', 'convW', [2, 6, 10, 14]);
+            if(charts.D) runEngine(hists.D, charts.D, 'targetD', 'diffD', 'convD', [7, 14, 21, 28]);
+            if(charts['4']) runEngine(hists['4'], charts['4'], 'target4', 'diff4', 'conv4', [8, 16, 24, 32]);
         }
 
         function initCharts() {
-            ['W','D','4'].forEach(k => {
-                const ctx = document.getElementById(`chart${k}`).getContext('2d');
-                const ds = [{ borderColor: '#FFF', borderWidth: 1, pointRadius: 0, hitRadius: 30 }, { borderColor: '#00FF41', borderWidth: 2, borderDash: [2,1], pointRadius: 0, hitRadius: 30 }];
-                for(let i=0; i<4; i++) ds.push({ borderColor: colors[i], borderWidth: 0.3, borderDash: [4,2], pointRadius: 0, hitRadius: 30 });
-                charts[k] = new Chart(ctx, { type: 'line', data: { datasets: ds }, options: { responsive: true, maintainAspectRatio: false, animation: false, scales: { x: { type: 'time', grid: { display: false } }, y: { position: 'right', grid: { color: '#0a0a0a' } } }, plugins: { legend: { display: false } } } });
-                
+            ['W', 'D', '4'].forEach(k => {
+                const canvas = document.getElementById(`chart${k}`);
+                const ds = [
+                    { data: [], borderColor: '#FFF', borderWidth: 1, pointRadius: 0, hitRadius: 30 },
+                    { data: [], borderColor: '#00FF41', borderWidth: 2, borderDash: [2,1], pointRadius: 0, hitRadius: 30 }
+                ];
+                for(let i=0; i<4; i++) ds.push({ data: [], borderColor: colors[i], borderWidth: 0.5, borderDash: [4,2], pointRadius: 0, hitRadius: 30 });
+                charts[k] = new Chart(canvas.getContext('2d'), {
+                    type: 'line', data: { datasets: ds },
+                    options: {
+                        responsive: true, maintainAspectRatio: false, animation: false,
+                        interaction: { mode: 'nearest', intersect: true, axis: 'xy' },
+                        scales: { x: { type: 'time', grid: { display: false } }, y: { position: 'right', grid: { color: '#0a0a0a' } } },
+                        plugins: { legend: { display: false } }
+                    }
+                });
+
                 let state = { drag: false, lx: 0, ly: 0 };
-                ctx.canvas.addEventListener('touchstart', e => { if(e.touches.length === 1) { state.drag = true; state.lx = e.touches[0].clientX; state.ly = e.touches[0].clientY; } }, {passive: true});
-                ctx.canvas.addEventListener('touchmove', e => {
+                canvas.addEventListener('touchstart', e => { if(e.touches.length === 1) { state.drag = true; state.lx = e.touches[0].clientX; state.ly = e.touches[0].clientY; } }, {passive: true});
+                canvas.addEventListener('touchmove', e => {
                     if(!state.drag || e.touches.length > 1) return;
                     const s = charts[k].scales;
                     const dx = ((e.touches[0].clientX - state.lx) / s.x.width) * (s.x.max - s.x.min);
@@ -151,11 +184,11 @@
                     state.lx = e.touches[0].clientX; state.ly = e.touches[0].clientY;
                     charts[k].update('none');
                 }, {passive: true});
-                ctx.canvas.addEventListener('touchend', () => state.drag = false);
+                canvas.addEventListener('touchend', () => state.drag = false);
             });
-            updateEngines();
+            startSystem();
         }
-        window.onload = start;
+        window.onload = initCharts;
     </script>
 </body>
 </html>
