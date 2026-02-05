@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SKYNET V55 - ULTRA-SLIM GHOST</title>
+    <title>SKYNET V54 - ANCORAGEM CIRÚRGICA</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
     <style>
@@ -25,7 +25,7 @@
 </head>
 <body>
     <div class="toolbar">
-        <div style="line-height:1"><div style="font-size:1.1rem; font-weight:900;">SKYNET</div><div style="font-size:0.6rem; color:#00ff41; font-weight:900;">GHOST V55</div></div>
+        <div style="line-height:1"><div style="font-size:1.1rem; font-weight:900;">SKYNET</div><div style="font-size:0.6rem; color:#00ff41; font-weight:900;">V54 ANCHOR</div></div>
         <div style="display:flex; align-items:center;">
             <input type="text" id="symbol" value="BTCBRL">
             <button class="scan-btn" onclick="startSystem()">SCAN</button>
@@ -53,9 +53,7 @@
 
     <script>
         let charts = {}, hists = { W: [], D: [], '4': [] };
-        // Cores com transparência para os rastros não escolhidos
-        const colors = ['rgba(0,255,255,0.3)', 'rgba(255,0,255,0.3)', 'rgba(255,255,0,0.3)', 'rgba(255,140,0,0.3)'];
-        const solidColors = ['#00FFFF', '#FF00FF', '#FFFF00', '#FF8C00'];
+        const colors = ['#00FFFF', '#FF00FF', '#FFFF00', '#FF8C00'];
 
         function resetScale(key) {
             const chart = charts[key];
@@ -75,6 +73,12 @@
             refreshEngines();
         }
 
+        function refreshEngines() {
+            runEngine(hists.W, charts.W, 'targetW', 'diffW', 'convW', [2, 6, 10, 14]);
+            runEngine(hists.D, charts.D, 'targetD', 'diffD', 'convD', [7, 14, 21, 28]);
+            runEngine(hists['4'], charts['4'], 'target4', 'diff4', 'conv4', [8, 16, 24, 32]);
+        }
+
         function calculateExtremeTarget(points, baseline) {
             let countAbove = points.filter(p => p.y > baseline).length;
             let values = points.map(p => p.y);
@@ -83,7 +87,8 @@
 
         function runEngine(hist, chart, tid, sid, cid, offsets) {
             if(hist.length < 200) return;
-            const pLen = 40, fLen = 40, step = hist[1].x - hist[0].x;
+            const pLen = 40, fLen = 40;
+            const step = hist[1].x - hist[0].x;
 
             const getProj = (offset) => {
                 const idx = hist.length - 1 - offset;
@@ -94,14 +99,23 @@
                     if(s < bScore) { bScore = s; bIdx = i; }
                 }
                 if(bIdx === -1) return null;
-                let lV = hist[idx].c, lT = hist[idx].x;
+                
+                // CORREÇÃO DE ANCORAGEM: Forçar o nascimento da linha no preço real daquele momento
+                let lV = hist[idx].c;
+                let lT = hist[idx].x;
                 const fut = hist.slice(bIdx + pLen, bIdx + pLen + fLen);
-                return { points: [{x: lT, y: lV}, ...fut.map((d, k) => ({ x: lT + ((k+1) * step), y: lV * (d.c / hist[bIdx + pLen - 1].c) }))], baseline: lV };
+                
+                // O primeiro ponto do rastro DEVE ser o preço real de fechamento na origem
+                return { 
+                    points: [{x: lT, y: lV}, ...fut.map((d, k) => ({ x: lT + ((k+1) * step), y: lV * (d.c / hist[bIdx + pLen - 1].c) }))], 
+                    baseline: lV 
+                };
             };
 
             const main = getProj(0);
             if(!main) return;
             const traces = offsets.map(o => getProj(o));
+
             const mainExtreme = calculateExtremeTarget(main.points, main.baseline);
             document.getElementById(tid).innerText = `ATUAL: R$ ${mainExtreme.toLocaleString('pt-BR', {maximumFractionDigits:0})}`;
 
@@ -111,19 +125,15 @@
                 const tExt = calculateExtremeTarget(t.points, t.baseline);
                 const diff = Math.abs((mainExtreme - tExt) / mainExtreme);
                 if(diff < minDiff) { minDiff = diff; bestIdx = i; }
-                // 🚀 RESET ULTRA-FINO E TRANSPARENTE
-                chart.data.datasets[i+2].borderWidth = 0.3;
-                chart.data.datasets[i+2].borderColor = colors[i];
+                chart.data.datasets[i+2].borderWidth = 0.5;
             });
 
             if(bestIdx !== -1) {
-                // 🚀 DESTACA A ESCOLHIDA (SÓLIDA E GROSSA)
                 chart.data.datasets[bestIdx+2].borderWidth = 2;
-                chart.data.datasets[bestIdx+2].borderColor = solidColors[bestIdx];
                 const convExt = calculateExtremeTarget(traces[bestIdx].points, traces[bestIdx].baseline);
                 const convEl = document.getElementById(cid);
                 convEl.innerText = `CONV: R$ ${convExt.toLocaleString('pt-BR', {maximumFractionDigits:0})}`;
-                convEl.style.color = solidColors[bestIdx];
+                convEl.style.color = colors[bestIdx];
                 const dDisplay = ((mainExtreme - calculateExtremeTarget(traces[0].points, traces[0].baseline)) / mainExtreme * 100).toFixed(2);
                 document.getElementById(sid).innerText = `DIF: ${dDisplay}%`;
             }
@@ -144,14 +154,14 @@
                     { data: [], borderColor: '#FFF', borderWidth: 1, pointRadius: 0, hitRadius: 30 },
                     { data: [], borderColor: '#00FF41', borderWidth: 2, borderDash: [2,1], pointRadius: 0, hitRadius: 30 }
                 ];
-                for(let i=0; i<4; i++) ds.push({ data: [], borderColor: colors[i], borderWidth: 0.3, borderDash: [4,2], pointRadius: 0, hitRadius: 30 });
+                for(let i=0; i<4; i++) ds.push({ data: [], borderColor: colors[i], borderWidth: 0.5, borderDash: [4,2], pointRadius: 0, hitRadius: 30 });
                 charts[k] = new Chart(canvas.getContext('2d'), {
                     type: 'line', data: { datasets: ds },
                     options: {
                         responsive: true, maintainAspectRatio: false, animation: false,
                         interaction: { mode: 'nearest', intersect: true, axis: 'xy' },
                         scales: { x: { type: 'time', grid: { display: false } }, y: { position: 'right', grid: { color: '#0a0a0a' } } },
-                        plugins: { legend: { display: false } }
+                        plugins: { legend: { display: false }, tooltip: { enabled: true, backgroundColor: 'rgba(0,0,0,0.9)' } }
                     }
                 });
                 let state = { drag: false, lx: 0, ly: 0 };
